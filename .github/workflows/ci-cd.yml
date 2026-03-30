@@ -1,0 +1,55 @@
+name: Smart Markdown CI/CD
+
+# 1. Triggers: When should this pipeline run?
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  # --- JOB 1: Run Unit Tests ---
+  test:
+    name: Run Pytest
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # We install from your existing requirements.txt
+          pip install -r requirements.txt
+          
+      - name: Run tests with Pytest
+        run: |
+          pytest -v
+
+  # --- JOB 2: Build Docker Image ---
+  build:
+    name: Build Docker Image
+    # 'needs' ensures Docker only builds IF the tests pass!
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Build Docker image
+        run: |
+          # This builds the image just like you did locally to ensure it compiles
+          docker build -t smart-markdown-app:${{ github.sha }} .
+          
+      # Note: To actually publish this image to Docker Hub or AWS ECR, 
+      # you would add a "docker push" step here and configure your repository secrets.
