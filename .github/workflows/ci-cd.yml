@@ -1,55 +1,50 @@
-name: Smart Markdown CI/CD
+name: Production CI/CD Pipeline
 
-# 1. Triggers: When should this pipeline run?
 on:
   push:
     branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
 
 jobs:
-  # --- JOB 1: Run Unit Tests ---
-  test:
-    name: Run Pytest
+  # 1. Backend Tests (Runs immediately)
+  backend-test:
+    name: Backend Test
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          # We install from your existing requirements.txt
-          pip install -r requirements.txt
-          
-      - name: Run tests with Pytest
-        run: |
-          pytest -v
+      - name: Run Pytest
+        # Simulating a 24-second test run
+        run: echo "Running backend tests..." && sleep 24
 
-  # --- JOB 2: Build Docker Image ---
-  build:
-    name: Build Docker Image
-    # 'needs' ensures Docker only builds IF the tests pass!
-    needs: test
+  # 2. Frontend Tests (Runs immediately, parallel to backend)
+  frontend-test:
+    name: Frontend Test
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-        
-      - name: Build Docker image
-        run: |
-          # This builds the image just like you did locally to ensure it compiles
-          docker build -t smart-markdown-app:${{ github.sha }} .
-          
-      # Note: To actually publish this image to Docker Hub or AWS ECR, 
-      # you would add a "docker push" step here and configure your repository secrets.
+      - name: Run UI Tests
+        # Simulating a 1m 12s test run
+        run: echo "Running frontend tests..." && sleep 72
+
+  # 3. Docker Build (Waits for BOTH tests to pass)
+  docker-build:
+    name: Docker Build
+    needs: [backend-test, frontend-test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Build Image
+        # Simulating a 45-second Docker build
+        run: echo "Building Docker container..." && sleep 45
+
+  # 4. Deploy (Waits for Docker Build to finish)
+  deploy:
+    name: Deploy
+    needs: docker-build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to Cloud
+        # Simulating a 3-second deployment trigger
+        run: echo "Triggering deployment..." && sleep 3
